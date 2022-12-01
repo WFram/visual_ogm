@@ -1,0 +1,22 @@
+%YAML:1.0
+
+
+Scale_factor: 20 
+Tcw_form: 1
+Cloud_max_x: 20
+Cloud_min_x: -15
+Cloud_max_z: 15
+Cloud_min_z: -10
+Free_thresh: 0.7
+Occupied_thresh: 0.5
+Use_local_counters: 1
+Use_gaussian_counters: 1
+Use_boundary_detection: 1
+Publish_trajectory: 1
+Visit_thresh: 5
+Thresh_extension: 5
+Step_extension: 5
+Gaussian_kernel_size: 3
+Canny_thresh: 350
+Upper_height: 0.25
+Lower_heught: -0.25

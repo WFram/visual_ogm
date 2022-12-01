@@ -1,0 +1,11 @@
+<launch>
+    <remap from="/KF_map_points" to="/vslam2/KF_MapPoints_Stereo"/>
+    <remap from="/KF_pose" to="/vslam2/KF_Pose_Stereo"/>
+    <node pkg="visual_occupancy_map"  type="occupancy_map_node"  name="occupancy_map_node" 
+          args="$(find visual_occupancy_map)/config/sber_mseg.yaml" 
+          cwd="node"   output="screen">
+    
+    </node>
+
+</launch>
+

@@ -1,0 +1,14 @@
+<launch>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="map_broadcaster" 
+    args="0 0 0 0 0 0 1 /map world" />
+    <remap from="/KF_map_points" to="/vslam_stereo_inertial/KF_MapPoints"/>
+    <remap from="/KF_pose" to="/vslam_stereo_inertial/KF_Pose"/>
+    <remap from="/all_KF_and_points" to="/vslam_stereo_inertial/All_KF_MapPoints"/>
+    <node pkg="visual_occupancy_map"  type="occupancy_map_node"  name="occupancy_map_node" 
+          args="/home/igor/catkin_ws/src/visual_occupancy_map/config/dog.yaml" 
+          cwd="node"   output="screen">
+    
+    </node>
+    
+</launch>
+
