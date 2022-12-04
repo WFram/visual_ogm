@@ -47,6 +47,8 @@ int canny_thresh = 350;
 float upper_height = 1.0;
 float lower_height = 0.0;
 float height_cam = 0.5;
+float y_lower = -0.5;
+float y_upper = 0.5;
 bool Tcw_form = false;
 
 float grid_max_x, grid_min_x, grid_max_z, grid_min_z;
@@ -66,8 +68,8 @@ nav_msgs::OccupancyGrid grid_map_msg;
 bool first_msg = true;
 float kf_pos_x, kf_pos_z;
 int kf_pos_grid_x, kf_pos_grid_z;
-std::vector <cv::Point> trj;
-std::vector <cv::Point> kf_poses;
+std::vector<cv::Point> trj;
+std::vector<cv::Point> kf_poses;
 
 using namespace std;
 
@@ -92,7 +94,7 @@ void extensionMap(const bool &width, const bool &positive);
 void processMapPt(const geometry_msgs::Point &curr_pt, cv::Mat &occupied,
                   cv::Mat &visited, cv::Mat &pt_mask, int kf_pos_grid_x, int kf_pos_grid_z);
 
-void processMapPts(const std::vector <geometry_msgs::Pose> &pts, unsigned int n_pts,
+void processMapPts(const std::vector<geometry_msgs::Pose> &pts, unsigned int n_pts,
                    unsigned int start_id, int kf_pos_grid_x, int kf_pos_grid_z);
 
 void getGridMap();
@@ -146,11 +148,11 @@ int main(int argc, char **argv) {
 
 
     ros::Subscriber sub_all_kf_and_pts = nodeHandler.subscribe("/all_KF_and_points", 1000, loopClosingCallback);
-    message_filters::Subscriber <sensor_msgs::PointCloud2> MapPoints_sub(nodeHandler, "/KF_map_points", 1000);
-    message_filters::Subscriber <nav_msgs::Odometry> KF_pose_sub(nodeHandler, "/KF_pose", 1000);
+    message_filters::Subscriber<sensor_msgs::PointCloud2> MapPoints_sub(nodeHandler, "/KF_map_points", 1000);
+    message_filters::Subscriber<nav_msgs::Odometry> KF_pose_sub(nodeHandler, "/KF_pose", 1000);
 
-    typedef message_filters::sync_policies::ApproximateTime <sensor_msgs::PointCloud2, nav_msgs::Odometry> sync_pol;
-    message_filters::Synchronizer <sync_pol> sync(sync_pol(1000), MapPoints_sub, KF_pose_sub);
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, nav_msgs::Odometry> sync_pol;
+    message_filters::Synchronizer<sync_pol> sync(sync_pol(1000), MapPoints_sub, KF_pose_sub);
     sync.registerCallback(boost::bind(&ptsKFCallback, _1, _2));
 
     pub_grid_map = nodeHandler.advertise<nav_msgs::OccupancyGrid>("/visual_occupancy_node/grid_map", 1000);
@@ -176,6 +178,7 @@ void ptsKFCallback(const sensor_msgs::PointCloud2::ConstPtr &MapPoints, const na
     geometry_msgs::Pose temp;
 
     if (Tcw_form) {
+        // Kf_pose now is expressed in world frame (Twc)
         temp.position = Kf_pose->pose.pose.position;
         temp.orientation = Kf_pose->pose.pose.orientation;
 
@@ -234,6 +237,7 @@ void ptsKFCallback(const sensor_msgs::PointCloud2::ConstPtr &MapPoints, const na
     pts_and_pose.poses.push_back(temp);
 
     pcl::PointCloud<pcl::PointXYZ> cloud;
+    // Points in the world frame
     pcl::fromROSMsg(*MapPoints, cloud);
 
     for (auto mp: cloud.points) {
@@ -242,6 +246,8 @@ void ptsKFCallback(const sensor_msgs::PointCloud2::ConstPtr &MapPoints, const na
             continue;
         if (mp.z < lower_height || mp.z > upper_height)
             continue;
+//        if (mp.y < y_lower || mp.y > y_upper)
+//            continue;
         geometry_msgs::Pose tempPt;
         tempPt.position.x = mp.x;
         tempPt.position.z = mp.y;
@@ -264,7 +270,7 @@ void ptsKFCallback(const sensor_msgs::PointCloud2::ConstPtr &MapPoints, const na
         cloud_min_z = -step_extension + cloud_min_z;
         extensionMap(false, false);
     }
-    boost::shared_ptr <geometry_msgs::PoseArray> pts_and_pose_temp = boost::make_shared<geometry_msgs::PoseArray>(
+    boost::shared_ptr<geometry_msgs::PoseArray> pts_and_pose_temp = boost::make_shared<geometry_msgs::PoseArray>(
             pts_and_pose);
     updateGridMap(pts_and_pose_temp);
 
@@ -370,7 +376,7 @@ void processMapPt(const geometry_msgs::Point &curr_pt, cv::Mat &occupied,
     }
 }
 
-void processMapPts(const std::vector <geometry_msgs::Pose> &pts, unsigned int n_pts,
+void processMapPts(const std::vector<geometry_msgs::Pose> &pts, unsigned int n_pts,
                    unsigned int start_id, int kf_pos_grid_x, int kf_pos_grid_z) {
     unsigned int end_id = start_id + n_pts;
     if (use_local_counters) {
@@ -508,7 +514,7 @@ void resetGridMap(const geometry_msgs::PoseArray::ConstPtr &all_kf_and_pts) {
 #else
     std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
 #endif
-    double ttrack = std::chrono::duration_cast < std::chrono::duration < double > > (t2 - t1).count();
+    double ttrack = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
     printf("Done. Time taken: %f secs\n", ttrack);
     pub_grid_map.publish(grid_map_msg);
 }
@@ -540,8 +546,8 @@ void getGridMap() {
     }
     if (use_boundary_detection) {
         cv::Mat canny_output;
-        std::vector <std::vector<cv::Point>> contours;
-        std::vector <cv::Vec4i> hierarchy;
+        std::vector<std::vector<cv::Point>> contours;
+        std::vector<cv::Vec4i> hierarchy;
         cv::Canny(grid_map_thresh, canny_output, canny_thresh, canny_thresh * 2, 3);
         for (int row = 0; row < h; ++row) {
             for (int col = 0; col < w; ++col) {
@@ -582,6 +588,8 @@ void parseParams(int argc, char **argv) {
     fs["Canny_thresh"] >> canny_thresh;
     fs["Upper_height"] >> upper_height;
     fs["Lower_height"] >> lower_height;
+    fs["Y_Upper"] >> y_upper;
+    fs["Y_Lower"] >> y_lower;
 }
 
 void printParams() {
