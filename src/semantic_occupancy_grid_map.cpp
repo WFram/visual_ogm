@@ -397,7 +397,7 @@ void saveMap(unsigned int id) {
 		cv::imwrite("results//semantic_map_.jpg", rgb_map);
 		
 		std::vector<int> compression_params; 
-		compression_params.push_back(CV_IMWRITE_PXM_BINARY); 
+		compression_params.push_back(cv::IMWRITE_PXM_BINARY);
 		compression_params.push_back(0); 
 		const std::string imageFilename = "results//grid_map_navigation" + to_string(id) + ".pgm"; 
 
@@ -412,7 +412,7 @@ void saveMap(unsigned int id) {
 		cv::imwrite("results//semantic_map_.jpg", rgb_map);
 
 		std::vector<int> compression_params; 
-		compression_params.push_back(CV_IMWRITE_PXM_BINARY); 
+		compression_params.push_back(cv::IMWRITE_PXM_BINARY);
 		compression_params.push_back(0); 
 		const std::string imageFilename = "results//grid_map_navigation.pgm"; 
 
