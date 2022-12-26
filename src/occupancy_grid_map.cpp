@@ -15,6 +15,7 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <std_srvs/Empty.h>
 
 #include <pcl_conversions/pcl_conversions.h>
 
@@ -46,7 +47,7 @@ int gaussian_kernel_size = 3;
 int canny_thresh = 350;
 float upper_height = 1.0;
 float lower_height = 0.0;
-float height_cam = 0.5;
+float height_cam = 0.0;
 float y_lower = -0.5;
 float y_upper = 0.5;
 bool Tcw_form = false;
@@ -64,6 +65,7 @@ unsigned int n_kf_received;
 bool loop_closure_being_processed = false;
 ros::Publisher pub_grid_map;
 ros::Publisher pub_traj_map;
+ros::ServiceServer map_saver;
 nav_msgs::OccupancyGrid grid_map_msg;
 bool first_msg = true;
 float kf_pos_x, kf_pos_z;
@@ -98,6 +100,14 @@ void processMapPts(const std::vector<geometry_msgs::Pose> &pts, unsigned int n_p
                    unsigned int start_id, int kf_pos_grid_x, int kf_pos_grid_z);
 
 void getGridMap();
+
+std::function<bool(std_srvs::Empty::Request &req,
+                   std_srvs::Empty::Response &res)>
+        srv_cbk = [](std_srvs::Empty::Request &req,
+                     std_srvs::Empty::Response &res) {
+    saveMap();
+    return true;
+};
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "Vision occupancy map");
@@ -154,6 +164,9 @@ int main(int argc, char **argv) {
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, nav_msgs::Odometry> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(1000), MapPoints_sub, KF_pose_sub);
     sync.registerCallback(boost::bind(&ptsKFCallback, _1, _2));
+
+    map_saver = nodeHandler.advertiseService<std_srvs::Empty::Request,
+            std_srvs::Empty::Response>("/visual_occupancy_node/save_map", srv_cbk);
 
     pub_grid_map = nodeHandler.advertise<nav_msgs::OccupancyGrid>("/visual_occupancy_node/grid_map", 1000);
     if (publish_trajectory) {
@@ -275,6 +288,7 @@ void ptsKFCallback(const sensor_msgs::PointCloud2::ConstPtr &MapPoints, const na
     updateGridMap(pts_and_pose_temp);
 
     grid_map_msg.info.map_load_time = ros::Time::now();
+    grid_map_msg.header.frame_id = "odom";
     pub_grid_map.publish(grid_map_msg);
 
 }
@@ -313,6 +327,7 @@ void ptCallback(const geometry_msgs::PoseArray::ConstPtr &pts_and_pose) {
     updateGridMap(pts_and_pose);
 
     grid_map_msg.info.map_load_time = ros::Time::now();
+    grid_map_msg.header.frame_id = "odom";
 
     pub_grid_map.publish(grid_map_msg);
 }
@@ -516,6 +531,7 @@ void resetGridMap(const geometry_msgs::PoseArray::ConstPtr &all_kf_and_pts) {
 #endif
     double ttrack = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
     printf("Done. Time taken: %f secs\n", ttrack);
+    grid_map_msg.header.frame_id = "odom";
     pub_grid_map.publish(grid_map_msg);
 }
 

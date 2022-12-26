@@ -1,11 +1,11 @@
 <launch>
-    <node pkg="tf2_ros" type="static_transform_publisher" name="map_broadcaster" 
-    args="0 0 0 0 0 0 1 /map world" />
-    <remap from="/KF_map_points" to="/vslam2/local_map_points"/>
-    <remap from="/KF_pose" to="/vslam2/Pose"/>
+<!--    <node pkg="tf2_ros" type="static_transform_publisher" name="map_broadcaster" -->
+<!--    args="0 0 0 0 0 0 1 /map world" />-->
+    <remap from="/KF_map_points" to="/stereo_dso/local_point_cloud"/>
+    <remap from="/KF_pose" to="/stereo_dso/pose_hf"/>
 <!--    <remap from="/all_KF_and_points" to="/vslam2/map_points"/>-->
     <node pkg="visual_occupancy_map"  type="occupancy_map_node"  name="occupancy_map_node" 
-          args="/home/wfram/visual_occupancy_map_ws/src/visual_occupancy_map/config/dog.yaml"
+          args="$(find visual_occupancy_map)/config/dog.yaml"
           cwd="node"   output="screen">
     </node>
     
